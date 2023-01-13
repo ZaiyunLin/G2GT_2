@@ -1,0 +1,74 @@
+apiVersion: kubeflow.org/v1
+kind: Job
+metadata:
+  name: g2gt-ddp
+spec:
+  pytorchReplicaSpecs:
+    Master:
+      replicas: 1
+      restartPolicy: OnFailure
+      template:
+        metadata:
+          annotations:
+            sidecar.istio.io/inject: "false"
+        spec:
+         containers:
+            - name: g2gt-container
+              image: harbor-qzm.stonewise.cn/proxy_cache/kubeflow/g2gt:pretrained-model
+              command: ["bash", "g2gt_github/src/train.sh"]
+              #env: []
+              #args: ["--epochs", "4", "--batch-size", "24", "--weight-decay", "0.1", "--image-size", "224", "--backend", "nccl"]
+              imagePullPolicy: "Always"
+              volumeMounts:
+                - mountPath: /dev/shm
+                  name: dshm
+                - mountPath: /home/jovyan
+                  name: zaiyun
+              resources:
+                limits:
+                  memory: "8Gi"
+                  cpu: "10"
+                  nvidia.com/gpu: 1
+          volumes:
+            - name: dshm
+              emptyDir:
+                medium: Memory
+            - name: zaiyun
+              persistentVolumeClaim:
+                claimName: zaiyun
+          hostIPC: true
+             
+         
+    Worker:
+      replicas: 1
+      restartPolicy: OnFailure
+      template:
+        metadata:
+          annotations:
+            sidecar.istio.io/inject: "false"
+        spec:
+          containers:
+            - name: g2gt-container
+              image: harbor-qzm.stonewise.cn/proxy_cache/kubeflow/g2gt:pretrained-model
+              command: ["bash", "g2gt_github/src/train.sh"]
+              env: []
+              #args: ["--epochs", "4", "--batch-size", "24", "--weight-decay", "0.1", "--image-size", "224", "--backend", "nccl"]
+              imagePullPolicy: "Always"
+              volumeMounts:
+                - mountPath: /dev/shm
+                  name: dshm
+                - mountPath: /home/jovyan
+                  name: zaiyun
+              resources:
+                limits:
+                  memory: "8Gi"
+                  cpu: "10"
+                  nvidia.com/gpu: 1
+          volumes:
+            - name: dshm
+              emptyDir:
+                medium: Memory
+            - name: zaiyun
+              persistentVolumeClaim:
+                claimName: zaiyun
+          hostIPC: true

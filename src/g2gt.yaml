@@ -1,0 +1,47 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: g2gt-gen # 训练任务名称
+spec:
+  parallelism: 1 # 并行副本数量: 1~n
+  template:
+    metadata:
+      annotations:
+        sidecar.istio.io/inject: "false" # 用户namespace下需要禁用istio保证服务通畅
+    spec:
+      affinity: # 节点选择策略（任务有分配到指定节点时，需要配置）
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: func
+                operator: In
+                values:
+                - 'job' # 策略（2080: 选择有NVIDIA GeForce RTX 2080显卡的节点, 1080: 选择有NVIDIA GeForce RTX 1080显卡的节点, v100s: 选择有Tesla V100S-PCIE-32GB显卡的节点）
+      containers:
+      - name: ds-container # 训练任务容器名称，可以随便起名
+        imagePullPolicy: Always
+        image: harbor-qzm.stonewise.cn/proxy_cache/kubeflow/g2gt:pretrained-model # 训练任务镜像
+        #-case 7kac -table DS_7kac_100w -total 2000 
+        command: ["bash", "g2gt_github/src/train.sh"] # 也可以使用args["--file_dir", "/home/jovyan/mnist.npz"]只填写启动参数
+        volumeMounts: # 持久卷挂载到容器的路径
+          - mountPath: /dev/shm
+            name: dshm
+          - mountPath: /home/jovyan
+            name: zaiyun
+        resources: # 服务需要的机器资源（如memory或cpu不指定，最多可使用节点最大资源值）
+          limits:
+            memory: "0"
+            cpu: "60"
+            nvidia.com/gpu: 0
+      volumes:
+        - name: dshm
+          emptyDir:
+            medium: Memory
+        - name: zaiyun
+          persistentVolumeClaim: # 使用的持久卷
+            claimName: zaiyun
+      restartPolicy: Never
+      hostIPC: true
+  backoffLimit: 0 # 任务失败后重启次数
+  ttlSecondsAfterFinished: 259200 # 任务运行完毕后，多久清除

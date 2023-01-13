@@ -1,0 +1,92 @@
+apiVersion: "kubeflow.org/v1"
+kind: "PyTorchJob"
+metadata:
+  name: "ddp-test"
+spec:
+  ttlSecondsAfterFinished: 600 # 任务运行完毕后，多久清除
+  pytorchReplicaSpecs:
+    Master:
+      replicas: 1
+      restartPolicy: OnFailure
+      template:
+        metadata:
+          annotations:
+            sidecar.istio.io/inject: "false"
+        spec:
+          affinity: # 节点选择策略（任务有分配到指定节点时，需要配置）
+            nodeAffinity:
+              requiredDuringSchedulingIgnoredDuringExecution:
+                nodeSelectorTerms:
+                - matchExpressions:
+                  - key: gpu-type
+                    operator: In
+                    values:
+                    - 'v100s'
+          containers:
+            - name: pytorch
+              image: harbor-qzm.stonewise.cn/proxy_cache/kubeflow/g2gt:pretrained-model
+              command: ["bash", "g2gt_github/src/train.sh"]
+              imagePullPolicy: "Always"
+              volumeMounts:
+                - mountPath: /dev/shm
+                  name: dshm
+              volumeMounts:
+                - mountPath: /home/jovyan
+                  name: zaiyun
+              resources: 
+                limits:
+                  memory: "15Gi"
+                  cpu: "10"
+                  nvidia.com/gpu: 1
+          volumes: 
+            - name: dshm
+              emptyDir:
+                medium: Memory
+          hostIPC: true
+          volumes: 
+            - name: zaiyun
+              persistentVolumeClaim:
+                claimName: zaiyun
+            
+        
+    Worker:
+      replicas: 11
+      restartPolicy: OnFailure
+      template:
+        metadata:
+          annotations:
+            sidecar.istio.io/inject: "false"
+        spec:
+          affinity: # 节点选择策略（任务有分配到指定节点时，需要配置）
+            nodeAffinity:
+              requiredDuringSchedulingIgnoredDuringExecution:
+                nodeSelectorTerms:
+                - matchExpressions:
+                  - key: gpu-type
+                    operator: In
+                    values:
+                    - 'v100s'
+          containers: 
+            - name: pytorch
+              image: harbor-qzm.stonewise.cn/proxy_cache/kubeflow/g2gt:pretrained-model
+              command: ["bash", "g2gt_github/src/train.sh"]
+              imagePullPolicy: "Always"
+              volumeMounts:
+                - mountPath: /dev/shm
+                  name: dshm
+              volumeMounts:
+                - mountPath: /home/jovyan
+                  name: zaiyun
+              resources: 
+                limits:
+                  memory: "15Gi"
+                  cpu: "10"
+                  nvidia.com/gpu: 1
+          hostIPC: true
+          volumes: 
+            - name: dshm
+              emptyDir:
+                medium: Memory
+            - name: zaiyun
+              persistentVolumeClaim:
+                claimName: zaiyun
