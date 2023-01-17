@@ -478,18 +478,29 @@ def smiles2graph(smiles_string, bfs=True,neutral_atoms=False):
 
 
 class UsptoDataset(InMemoryDataset):
-    def __init__(self, root = 'data/typed_uspto50k_split2', smiles2graph = smiles2graph, transform=None, pre_transform = None, smiles2graph_wrapper = smiles2graph_wrapper):
+    def __init__(self, root = 'data/',dataset='typed_uspto50k_split2', smiles2graph = smiles2graph, transform=None, pre_transform = None, smiles2graph_wrapper = smiles2graph_wrapper):
         '''
-            Pytorch Geometric PCQM4M dataset object
-                - root (str): the dataset folder will be located at root/pcqm4m_kddcup2021
-                - smiles2graph (callable): A callable function that converts a SMILES string into a graph object
-                    * The default smiles2graph requires rdkit to be installed
+        Args:
+            root (string): Root directory where the dataset should be saved.
+            transform (callable, optional): A function/transform that takes in an
+                :obj:`torch_geometric.data.Data` object and returns a transformed
+                version. The data object will be transformed before every access.
+                (default: :obj:`None`)
+            pre_transform (callable, optional): A function/transform that takes in
+                an :obj:`torch_geometric.data.Data` object and returns a
+                transformed version. The data object will be transformed before
+                being saved to disk. (default: :obj:`None`)
+                smiles2graph_wrapper (callable, optional): A function/transform that takes in
+                an :obj:`torch_geometric.data.Data` object and returns a
+                transformed version. The data object will be transformed before
+                being saved to disk. (default: :obj:`None`)
+                
         '''
         
         self.original_root = root
         self.smiles2graph = smiles2graph
         self.smiles2graph_wrapper = smiles2graph_wrapper
-        self.folder = osp.join(root)
+        self.folder = osp.join(root+dataset)
         self.trainindx = 0
         self.testindx = 0
         self.valindx = 0

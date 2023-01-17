@@ -20,30 +20,26 @@ from torch.utils.data import DataLoader
 from functools import partial
 
 dataset = None
-
-
-dataset = None
 def get_dataset(dataset_name = 'uspto'):
+    ''' get dataset and its information
+    Args:
+        dataset_name (str, optional): dataset name. Defaults to 'uspto'.
+    Returns:
+        dict: dataset information
+    '''
     global dataset
     if dataset is not None:
         return dataset
 
-    # max_node is set to max(max(num_val_graph_nodes), max(num_test_graph_nodes))
-    if dataset_name == 'uspto':
-        
-        dataset = {
-            'num_class': 1,
-            'loss_fn': F.cross_entropy,
-            'metric': 'train_loss',
-            'metric_mode': 'min',
-            'evaluator': 'none',
-            #'dataset': dataloader(),
-            'dataset': UsptoDataset(),
-            'max_node': 420,
-        }
-    else:
-        raise NotImplementedError
-    
+    # max_node is set to max(max(num_val_graph_nodes), max(num_test_graph_nodes))  
+    dataset = {
+        'num_class': 1,
+        'loss_fn': F.cross_entropy,
+        'metric': 'train_loss',
+        'metric_mode': 'min',
+        'evaluator': 'none',
+        'dataset': UsptoDataset(dataset=dataset_name),
+        'max_node': 420, }
 
     print(f' > {dataset_name} loaded!')
     print(dataset)
@@ -67,6 +63,7 @@ class GraphDataModule(LightningDataModule):
     ):
         super().__init__(*args, **kwargs)
         self.dataset_name = dataset_name
+        print(f' > dataset_name: {dataset_name}')
         self.dataset = get_dataset(self.dataset_name)
         te, tr, va = self.dataset['dataset'].get_idx_split()
         self.dataset_test = self.dataset['dataset'][:te]

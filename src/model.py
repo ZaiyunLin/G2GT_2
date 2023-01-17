@@ -203,19 +203,17 @@ class GraphFormer(pl.LightningModule):
         graph_attn_bias[:, :, 1:, 1:] = graph_attn_bias[:, :, 1:, 1:] + edge_input
         graph_attn_bias = graph_attn_bias + attn_bias.unsqueeze(1) # reset
         
-        # node feauture + graph token
+
         node_feature = self.atom_encoder(x).mean(dim=-2)           # [n_graph, n_node, n_hidden]
         if self.flag and perturb is not None:
             node_feature += perturb
 
         node_feature = node_feature + self.in_degree_encoder(in_degree) + self.out_degree_encoder(out_degree)
-        # print("reverse",batched_data.reverse)
         graph_token_feature = self.graph_token(batched_data.reverse)
-        # graph_token_feature = graph_token_feature.unsqueeze(1)
+
 
         if beam>1:
             node_feature = node_feature.repeat(beam,1,1)
-        node_feature += graph_token_feature
         graph_node_feature = torch.cat([graph_token_feature, node_feature], dim=1)
         enc_out = graph_node_feature
         
@@ -342,9 +340,9 @@ class GraphFormer(pl.LightningModule):
 
         node_feature = node_feature + self.in_degree_encoder(in_degree) + self.out_degree_encoder(out_degree)
         graph_token_feature = self.graph_token(batched_data.reverse)
-        # print(batched_data.reverse)
+
         graph_token_feature = graph_token_feature.unsqueeze(1)
-        node_feature += graph_token_feature
+        # node_feature += graph_token_feature
         graph_node_feature = torch.cat([graph_token_feature, node_feature], dim=1)
         ##encoder part
         
@@ -384,10 +382,7 @@ class GraphFormer(pl.LightningModule):
         lpe_input = self.gelu(lpe_input)
         lpe_input = torch.nansum(lpe_input,-2,keepdim = False)
 
-#         lpe_input = self.lpe_linear(lpe_input)
-#         lpe_input = self.gelu(lpe_input)
-#         lpe_input = torch.nansum(lpe_input,-1,keepdim = False)
-#         lpe_input = self.lpe_linear3(lpe_input)
+
         
         
 
@@ -416,9 +411,7 @@ class GraphFormer(pl.LightningModule):
         for dec_layer in self.decoderLayers:
             output = dec_layer(output,enc_out,enc_out,tgt_subsq_mask,y_graph_attn_bias,valid=valid,check=False)
 
-        
       
-
         output = self.outp_logits(output)
 
         return output
@@ -527,36 +520,36 @@ class GraphFormer(pl.LightningModule):
 
     def training_step(self, batched_data, batch_idx):
     
-        if self.dataset_name == 'uspto':
-            if not self.flag:
-                batch_pos_enc = batched_data.lpe_input
-                sign_flip = torch.rand(batch_pos_enc.size(-1),device=self.device)
-                sign_flip[sign_flip>=0.5] = 1.0; sign_flip[sign_flip<0.5] = -1.0
-                batch_pos_enc = batch_pos_enc * sign_flip.unsqueeze(0).unsqueeze(0).unsqueeze(0)
-                batched_data.lpe_input = batch_pos_enc
+        
+        if not self.flag:
+            batch_pos_enc = batched_data.lpe_input
+            sign_flip = torch.rand(batch_pos_enc.size(-1),device=self.device)
+            sign_flip[sign_flip>=0.5] = 1.0; sign_flip[sign_flip<0.5] = -1.0
+            batch_pos_enc = batch_pos_enc * sign_flip.unsqueeze(0).unsqueeze(0).unsqueeze(0)
+            batched_data.lpe_input = batch_pos_enc
 
-                y_hat = self(batched_data)
-                y_hat = y_hat.view(-1,y_hat.size(-1))
-                y_gt = batched_data.y_gt.view(-1)
-                
-                mask = ~torch.isnan(y_gt)
+            y_hat = self(batched_data)
+            y_hat = y_hat.view(-1,y_hat.size(-1))
+            y_gt = batched_data.y_gt.view(-1)
+            
+            mask = ~torch.isnan(y_gt)
 
 
-                loss = self.loss_fn(y_hat[mask],y_gt[mask],ignore_index=0) 
-     
+            loss = self.loss_fn(y_hat[mask],y_gt[mask],ignore_index=0) 
+    
 
-            else:
-                y_gt = batched_data.y.view(-1).float()
-                forward = lambda perturb: self(batched_data, perturb)
-                model_forward = (self, forward)
-                n_graph, n_node = batched_data.x.size()[:2]
-                perturb_shape = (n_graph, n_node, self.hidden_dim)
+        else:
+            y_gt = batched_data.y.view(-1).float()
+            forward = lambda perturb: self(batched_data, perturb)
+            model_forward = (self, forward)
+            n_graph, n_node = batched_data.x.size()[:2]
+            perturb_shape = (n_graph, n_node, self.hidden_dim)
 
-                optimizer = self.optimizers()
-                optimizer.zero_grad()
-                loss, _ = flag_bounded(model_forward, perturb_shape, y_gt, optimizer, batched_data.x.device, self.loss_fn,
-                               m=self.flag_m, step_size=self.flag_step_size, mag=self.flag_mag)
-                self.lr_schedulers().step()
+            optimizer = self.optimizers()
+            optimizer.zero_grad()
+            loss, _ = flag_bounded(model_forward, perturb_shape, y_gt, optimizer, batched_data.x.device, self.loss_fn,
+                            m=self.flag_m, step_size=self.flag_step_size, mag=self.flag_mag)
+            self.lr_schedulers().step()
         self.log('train_loss', loss.detach(),sync_dist=True)
         return loss
 
@@ -620,8 +613,7 @@ class GraphFormer(pl.LightningModule):
             gen.manual_seed(gen.seed())
             next_tokens = torch.multinomial(logits, 1, generator=gen)
             next_token, ind = torch.min(next_tokens, -1, keepdim=False, out=None)
-            # next_token = next_tokens[:,0]
-            #next_token = next_token.view(-1)
+
             # map logits index to actual onehot index
             next_words = torch.zeros((topk),dtype=torch.long,device=self.device)
             
