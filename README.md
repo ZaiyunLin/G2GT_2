@@ -16,7 +16,7 @@ pip install Cython  -i https://pypi.tuna.tsinghua.edu.cn/simple
 
 
 # Example Usage
-'''
+```
 #!/usr/bin/env bash
 [ -z "${exp_name}" ] && exp_name="uspto"
 [ -z "${seed}" ] && seed="0"
@@ -43,6 +43,6 @@ python entry.py --num_workers 1 --num_nodes 1 --seed $seed --batch_size $batch_s
       --gpus $n_gpu  --accelerator ddp \
       $arch \
       --default_root_dir $default_root_dir --progress_bar_refresh_rate 10\ 
-'''
+```
 
       
