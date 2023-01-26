@@ -14,5 +14,5 @@ src/data/uspto-full-distilled-weaklabel/uspto-full-distill-tgt.txt
 .vscode/
 src/.ipynb_checkpoints/
 src/lightning_logs/
-src/results
+src/results/*
 nohup.out

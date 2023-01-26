@@ -3,7 +3,7 @@ Requirements and Installation
 # install requirements
 create a new environment \
 conda create --name G2GT python=3.7 \
-conda activate G2GT \
+conda activate G2GT 
 
 pip install pytorch-lightning==1.4.5 -i https://pypi.tuna.tsinghua.edu.cn/simple \
 pip install torch==1.9.0+cu111 torchvision==0.10.0+cu111 torchaudio==0.9.0 -f https://download.pytorch.org/whl/torch_stable.html -i https://pypi.tuna.tsinghua.edu.cn/simple \
@@ -13,7 +13,7 @@ pip install rdkit-pypi==2021.9.3 -i https://pypi.tuna.tsinghua.edu.cn/simple \
 pip install torch-scatter torch-sparse torch-cluster torch-spline-conv torch-geometric -f https://data.pyg.org/whl/torch-1.9.0+cu111.html -i https://pypi.tuna.tsinghua.edu.cn/simple \
 pip install pympler -i https://pypi.tuna.tsinghua.edu.cn/simple \
 pip install --upgrade easy-kubeflow -i https://pypi.tuna.tsinghua.edu.cn/simple \
-pip install Cython  -i https://pypi.tuna.tsinghua.edu.cn/simple \
+pip install Cython  -i https://pypi.tuna.tsinghua.edu.cn/simple 
 
 
 # Example Usage
