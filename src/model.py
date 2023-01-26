@@ -68,10 +68,14 @@ class GraphFormer(pl.LightningModule):
             flag_m=3,
             flag_step_size=1e-3,
             flag_mag=1e-3,
+            inference_path = None,
+            weak_ensemble = 0,
             
         ):
         super().__init__()
         self.save_hyperparameters()
+        self.inference_path = inference_path
+        self.weak_ensemble = weak_ensemble
         self.head_size = head_size
 
         offset = 4
@@ -93,7 +97,7 @@ class GraphFormer(pl.LightningModule):
         
         '''NEW=============================================='''
         self.gelu = nn.GELU()
-        self.atom_edge_encoder = nn.Embedding(118*4+32+(2)+1+20+offset +11+1, hidden_dim, padding_idx=0) # atom*chiral +bond+start+end+0+gapnumber+[nh] offset +50+1split
+        self.atom_edge_encoder = nn.Embedding(118*4+32+(2)+1+20+offset +50+1, hidden_dim, padding_idx=0) # atom*chiral +bond+start+end+0+gapnumber+[nh] offset +50+1split
         self.centrality_encoder = nn.Embedding(50, head_size, padding_idx=0)
         self.lpe_linear = nn.Linear(2,head_size)
         self.lpe_linear3 = nn.Linear(30,head_size)
@@ -109,7 +113,7 @@ class GraphFormer(pl.LightningModule):
         self.layers = nn.ModuleList(encoders)
         
 
-        self.graph_token = nn.Embedding(11, hidden_dim)
+        self.graph_token = nn.Embedding(50, hidden_dim)
         self.graph_token_virtual_distance = nn.Embedding(1, head_size)
         
         #todo fix eval
@@ -203,17 +207,20 @@ class GraphFormer(pl.LightningModule):
         graph_attn_bias[:, :, 1:, 1:] = graph_attn_bias[:, :, 1:, 1:] + edge_input
         graph_attn_bias = graph_attn_bias + attn_bias.unsqueeze(1) # reset
         
-
+        # print("x",x.shape)
         node_feature = self.atom_encoder(x).mean(dim=-2)           # [n_graph, n_node, n_hidden]
         if self.flag and perturb is not None:
             node_feature += perturb
 
         node_feature = node_feature + self.in_degree_encoder(in_degree) + self.out_degree_encoder(out_degree)
-        graph_token_feature = self.graph_token(batched_data.reverse)
+        graph_token_feature = self.graph_token(batched_data.reverse) #[n_graph, n_hidden]
+        graph_token_feature = graph_token_feature.unsqueeze(1) # [n_graph, n_node, n_hidden]
+
 
 
         if beam>1:
             node_feature = node_feature.repeat(beam,1,1)
+        # print("graph_token_feature, node_feature",graph_token_feature.shape, node_feature.shape)
         graph_node_feature = torch.cat([graph_token_feature, node_feature], dim=1)
         enc_out = graph_node_feature
         
@@ -415,8 +422,6 @@ class GraphFormer(pl.LightningModule):
         output = self.outp_logits(output)
 
         return output
-    
-    
     
     
     
@@ -792,11 +797,7 @@ class GraphFormer(pl.LightningModule):
             'y_true': y_true,
             'idx': batched_data.idx,
         }
-
-
-
  
-
     def sampling(self,scores,logits,indices,topk):
         gen = torch.Generator(device=self.device)
         gen.manual_seed(gen.seed())
@@ -852,9 +853,6 @@ class GraphFormer(pl.LightningModule):
             logits = sorted_logits*sorted_indices_to_keep.int().float()
             #print(logits[0])
         return logits,sorted_indices
-
-
-
 
     def test_step(self, batched_data, batch_idx): #split
         start =time.time()
@@ -959,13 +957,17 @@ class GraphFormer(pl.LightningModule):
         top_p = 0.75
         with torch.no_grad():
             encoder_start = time.time()
-            # ys = torch.randint(low=532,high=582,size=(topk,1),dtype=torch.long,device=self.device)
-            ys = torch.tensor([[532]],dtype=torch.long,device=self.device) + batched_data.reverse
-            ys = ys.repeat(topk,1)
+            if self.weak_ensemble == 1:
+                ys = torch.randint(low=532,high=582,size=(topk,1),dtype=torch.long,device=self.device)
+            else:
+                ys = torch.tensor([[532]],dtype=torch.long,device=self.device) + batched_data.reverse
+                ys = ys.repeat(topk,1)
 
             y_true = batched_data.y_gt.view(-1)
-            # batched_data.reverse = torch.randint(low=0,high=50,size=(topk,),dtype=torch.long,device=self.device)
-            batched_data.reverse = batched_data.reverse.repeat(topk,1)
+            if self.weak_ensemble == 1:
+                batched_data.reverse = torch.randint(low=0,high=50,size=(topk,),dtype=torch.long,device=self.device)
+            else:
+                batched_data.reverse = batched_data.reverse.repeat(topk,1)
 
             batched_data.central_input = torch.zeros((topk,1,1),dtype=torch.long,device = self.device)
             batched_data.lpe_input = torch.zeros((topk,1,1,30),dtype=torch.float,device = self.device)
@@ -1064,10 +1066,6 @@ class GraphFormer(pl.LightningModule):
             'y_true': y_true,
             'idx': batched_data.idx,
         }
-
-
-
-
 
 
     def test_step_beam(self, batched_data, batch_idx):#beam
@@ -1244,13 +1242,18 @@ class GraphFormer(pl.LightningModule):
         }
 
     def test_epoch_end(self, outputs):
+        """
+        outputs: list of individual outputs of each validation step.
+        """
         import pickle
         import os
         total = 0
         correct = 0
         out_dic = {}
         i = 0
-        path ="g2gt_github/src/results/typed_uspto50k_split2"
+        path = self.inference_path
+        
+        # path ="g2gt_github/src/results/typed_uspto50k_split2"
         if not os.path.exists(path):
             os.mkdir(path)
 
@@ -1351,6 +1354,7 @@ class GraphFormer(pl.LightningModule):
         parser.add_argument('--flag_step_size', type=float, default=1e-3)
         parser.add_argument('--flag_mag', type=float, default=1e-3)
         parser.add_argument('--beam', type=int, default=1)
+        parser.add_argument('--inference_path', type=str, default="g2gt_github/src/results/typed_uspto50k_split2")
         return parent_parser
 
 class PositionalEncoding(nn.Module):

@@ -7,13 +7,16 @@
 
 export CUDA_VISIBLE_DEVICES=2,4,6
 # export NCCL_SOCKET_IFNAME=lo
+export CUDA_LAUNCH_BLOCKING=1
 default_root_dir=$PWD
 n_gpu=1
 
 python entry.py --num_workers 6 --seed 0 --batch_size 1 \
-      --dataset_name uspto \
+      --dataset_name typed_uspto50k_split2 \
       --gpus $n_gpu --accelerator ddp  $arch \
       --default_root_dir $default_root_dir \
       --checkpoint_path $default_root_dir/lightning_logs/checkpoints/last.ckpt --test --progress_bar_refresh_rate 1 \
-      # --limit_test_batches=0.002
+      --inference_path $default_root_dir/results/typed_uspto50k_split2/ \
+      --weak_ensemble 1 \
+      --limit_test_batches=0.0002 
 

@@ -18,6 +18,8 @@ def cli_main():
     # args
     # ------------
     parser = ArgumentParser()
+    #add weak_ensemble argument
+    parser.add_argument('--weak_ensemble', type=int, default=0)
     parser = pl.Trainer.add_argparse_args(parser)
     
 
@@ -88,6 +90,8 @@ def cli_main():
             flag=args.flag,
             flag_m=args.flag_m,
             flag_step_size=args.flag_step_size,
+            inference_path = args.inference_path,
+            weak_ensemble = args.weak_ensemble,
             
         )
 
@@ -112,6 +116,8 @@ def cli_main():
             flag=args.flag,
             flag_m=args.flag_m,
             flag_step_size=args.flag_step_size,
+            inference_path = args.inference_path,
+            weak_ensemble = args.weak_ensemble,
             
         )
     # pretrained_dict = pretrained_model.state_dict()

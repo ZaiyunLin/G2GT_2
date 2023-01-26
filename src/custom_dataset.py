@@ -478,7 +478,7 @@ def smiles2graph(smiles_string, bfs=True,neutral_atoms=False):
 
 
 class UsptoDataset(InMemoryDataset):
-    def __init__(self, root = 'data/',dataset='typed_uspto50k_split2', smiles2graph = smiles2graph, transform=None, pre_transform = None, smiles2graph_wrapper = smiles2graph_wrapper):
+    def __init__(self, root = 'data/',dataset='typed_uspto50k_split2', smiles2graph = smiles2graph, transform=None, pre_transform = None, smiles2graph_wrapper = smiles2graph_wrapper, weak_ensemble = 0):
         '''
         Args:
             root (string): Root directory where the dataset should be saved.
@@ -505,6 +505,7 @@ class UsptoDataset(InMemoryDataset):
         self.testindx = 0
         self.valindx = 0
         self.dic = {}
+        self.weak_ensemble = weak_ensemble
         super(UsptoDataset, self).__init__(self.folder, transform, pre_transform)
 
         # self.data, self.slices = torch.load(self.processed_paths[0])
@@ -583,8 +584,13 @@ class UsptoDataset(InMemoryDataset):
                     
                     data.y = tgt_graph['node_edge_seq']
                     #data.reverse = 0
-                    data.reverse = src_graph['reverse']
-                    # print(data.reverse)
+                    if self.weak_ensemble == 1:
+                        data.reverse = rng.integers(0,50)
+                    else:
+                        data.reverse = 0
+                    # data.reverse = src_graph['reverse']
+                    
+                    
     
 
                     data.edge_index = torch.from_numpy(data.edge_index).to(torch.int64)
