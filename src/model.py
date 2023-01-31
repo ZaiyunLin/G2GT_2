@@ -69,7 +69,9 @@ class GraphFormer(pl.LightningModule):
             flag_step_size=1e-3,
             flag_mag=1e-3,
             inference_path = None,
-            weak_ensemble = 0,
+            weak_ensemble = 1,
+            beam_size = 50,
+            sampling = False,
             
         ):
         super().__init__()
@@ -77,6 +79,16 @@ class GraphFormer(pl.LightningModule):
         self.inference_path = inference_path
         self.weak_ensemble = weak_ensemble
         self.head_size = head_size
+        self.beam_size = beam_size
+        self.sampling = sampling
+        # print sampling or beam
+        if self.sampling:
+            print('inference method: sampling')
+            # beam size
+            print('beam size: ', self.beam_size)
+        else:
+            print('inference method: beam search')
+            print('beam size: ', self.beam_size)
 
         offset = 4
         self.atom_encoder = nn.Embedding(128 * 37 + 1, hidden_dim, padding_idx=0)
@@ -214,7 +226,7 @@ class GraphFormer(pl.LightningModule):
 
         node_feature = node_feature + self.in_degree_encoder(in_degree) + self.out_degree_encoder(out_degree)
         graph_token_feature = self.graph_token(batched_data.reverse) #[n_graph, n_hidden]
-        graph_token_feature = graph_token_feature.unsqueeze(1) # [n_graph, n_node, n_hidden]
+        # graph_token_feature = graph_token_feature.unsqueeze(1) # [n_graph, n_node, n_hidden]
 
 
 
@@ -854,7 +866,7 @@ class GraphFormer(pl.LightningModule):
             #print(logits[0])
         return logits,sorted_indices
 
-    def test_step(self, batched_data, batch_idx): #split
+    def test_step_weak_sample(self, batched_data, batch_idx): #split
         start =time.time()
         # if batched_data.idx in self.keydic:
         #     return None
@@ -937,17 +949,17 @@ class GraphFormer(pl.LightningModule):
         "=======Inference========"
        
         # topk actually means pick k not topk 
-        topk = 50
+        topk = self.beam_size
         y_true = batched_data.y_gt.view(-1)
-        if len(y_true)>160 and len(y_true)<=200:
-            print(batch_idx,len(y_true),"case1")
+        # if len(y_true)>160 and len(y_true)<=200:
+        #     print(batch_idx,len(y_true),"case1")
             
-        elif len(y_true)>200 and len(y_true)<350:
-            topk = 30
-            print(batch_idx,len(y_true),"case2")
-        elif len(y_true)>350 :
-            print(batch_idx,len(y_true),"case3")
-            topk = 10
+        # elif len(y_true)>200 and len(y_true)<350:
+        #     topk = 30
+        #     print(batch_idx,len(y_true),"case2")
+        # elif len(y_true)>350 :
+        #     print(batch_idx,len(y_true),"case3")
+        #     topk = 10
 
         temperature = 4.5
         prediction = []
@@ -968,6 +980,7 @@ class GraphFormer(pl.LightningModule):
                 batched_data.reverse = torch.randint(low=0,high=50,size=(topk,),dtype=torch.long,device=self.device)
             else:
                 batched_data.reverse = batched_data.reverse.repeat(topk,1)
+            batched_data.reverse= batched_data.reverse.unsqueeze(1)
 
             batched_data.central_input = torch.zeros((topk,1,1),dtype=torch.long,device = self.device)
             batched_data.lpe_input = torch.zeros((topk,1,1,30),dtype=torch.float,device = self.device)
@@ -1066,11 +1079,9 @@ class GraphFormer(pl.LightningModule):
             'y_true': y_true,
             'idx': batched_data.idx,
         }
-
-
     def test_step_beam(self, batched_data, batch_idx):#beam
-        beam = 5
-        topk = 10
+        beam = self.beam_size
+        topk = self.beam_size
         def choose_topk(scores,new_scores):
             new_scores = torch.log(new_scores)+scores
 
@@ -1141,6 +1152,7 @@ class GraphFormer(pl.LightningModule):
             batched_data.lpe_eigenval = torch.zeros((1,1,1,30),dtype=torch.float,device = self.device)
             batched_data.y_attn_bias = torch.zeros((1,1,1), dtype=torch.float,device = self.device)
             batched_data.subsequent_mask =None
+            batched_data.reverse = torch.zeros((beam,1),dtype=torch.long,device = self.device)
 
             # temporary vars which hold the attn_bias info of last iteration
             lpe_input = torch.zeros((1,1,30),dtype=torch.float,device= self.device)
@@ -1159,7 +1171,7 @@ class GraphFormer(pl.LightningModule):
             try:
                 y_pred = self.translate_decoder(batched_data,enc_out=enc_out,y=ys,valid=True)
             except:
-                print("sadsdasd")
+                # print("sadsdasd")
                 print(i,len(prediction),ys)
                 raise Exception()
             #top k
@@ -1240,7 +1252,13 @@ class GraphFormer(pl.LightningModule):
             'y_true': y_true,
             'idx': batched_data.idx,
         }
-
+    def test_step(self, batched_data, batch_idx):
+        # if sampling
+        if self.sampling:
+            return self.test_step_weak_sample(batched_data,batch_idx)
+        # if beam search
+        else:
+            return self.test_step_beam(batched_data,batch_idx)
     def test_epoch_end(self, outputs):
         """
         outputs: list of individual outputs of each validation step.
@@ -1253,7 +1271,6 @@ class GraphFormer(pl.LightningModule):
         i = 0
         path = self.inference_path
         
-        # path ="g2gt_github/src/results/typed_uspto50k_split2"
         if not os.path.exists(path):
             os.mkdir(path)
 
@@ -1353,7 +1370,9 @@ class GraphFormer(pl.LightningModule):
         parser.add_argument('--flag_m', type=int, default=3)
         parser.add_argument('--flag_step_size', type=float, default=1e-3)
         parser.add_argument('--flag_mag', type=float, default=1e-3)
-        parser.add_argument('--beam', type=int, default=1)
+        parser.add_argument('--beam_size', type=int, default=50)
+        # beam search or sampling 
+        parser.add_argument('--sampling', action='store_true', default=False, help='use sampling or not, if not, use beam search')
         parser.add_argument('--inference_path', type=str, default="g2gt_github/src/results/typed_uspto50k_split2")
         return parent_parser
 

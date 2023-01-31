@@ -5,15 +5,16 @@ create a new environment \
 conda create --name G2GT python=3.7 \
 conda activate G2GT 
 
-pip install pytorch-lightning==1.4.5 -i https://pypi.tuna.tsinghua.edu.cn/simple \
-pip install torch==1.9.0+cu111 torchvision==0.10.0+cu111 torchaudio==0.9.0 -f https://download.pytorch.org/whl/torch_stable.html -i https://pypi.tuna.tsinghua.edu.cn/simple \
-pip install networkx -i https://pypi.tuna.tsinghua.edu.cn/simple \
-pip install tensorboardX==2.4.1 -i https://pypi.tuna.tsinghua.edu.cn/simple \
-pip install rdkit-pypi==2021.9.3 -i https://pypi.tuna.tsinghua.edu.cn/simple \
-pip install torch-scatter torch-sparse torch-cluster torch-spline-conv torch-geometric -f https://data.pyg.org/whl/torch-1.9.0+cu111.html -i https://pypi.tuna.tsinghua.edu.cn/simple \
-pip install pympler -i https://pypi.tuna.tsinghua.edu.cn/simple \
-pip install --upgrade easy-kubeflow -i https://pypi.tuna.tsinghua.edu.cn/simple \
-pip install Cython  -i https://pypi.tuna.tsinghua.edu.cn/simple 
+pip install pytorch-lightning==1.4.5  \
+pip install torch==1.9.0+cu111 torchvision==0.10.0+cu111 torchaudio==0.9.0 -f https://download.pytorch.org/whl/torch_stable.html \
+pip install networkx \
+pip install tensorboardX==2.4.1 \
+pip install rdkit-pypi==2021.9.3 \
+pip install torch-scatter torch-sparse torch-cluster torch-spline-conv torch-geometric -f https://data.pyg.org/whl/torch-1.9.0+cu111.html \
+pip install pympler \
+pip install --upgrade easy-kubeflow \
+pip install Cython
+pip install joblib
 
 
 # Example Usage
@@ -60,15 +61,21 @@ default_root_dir=$PWD
 n_gpu=1
 
 python entry.py --num_workers 6 --seed 0 --batch_size 1 \
-      --dataset_name typed_uspto50k_split2 \
+      --dataset_name uspto-full-distilled-weaklabel \
       --gpus $n_gpu --accelerator ddp  $arch \
       --default_root_dir $default_root_dir \
       --checkpoint_path $default_root_dir/lightning_logs/checkpoints/last.ckpt --test --progress_bar_refresh_rate 1 \
-      --inference_path $default_root_dir/results/typed_uspto50k_split2/ \
+      --inference_path $default_root_dir/results/uspto-full-distilled-weaklabel-sample \
+      --beam_size 50 \ #beam size for sampling and beam search
+      #--sampling \ # use sampling or beam search
 ```
 
 
 # Calculate accuracy
-Add multiple filename if using more than one results.
-``` python score.py --file uspto-50k-split2-split``` 
+Add multiple foldername if using more than one results (e.g. when combining sampling results with beam search results).  
+The raw inference outputs are under results folder
+``` python score.py --file uspto-50k-sampling uspto-50k-beam --beam 100``` 
 
+# Notice 
+Currently the weak-ensemble tags are hard coded to be 50.
+Our final results are calculated using a joint set of beam search and weak_enemble sampling

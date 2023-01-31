@@ -6,7 +6,6 @@ src/data/*
 src/results/*
 !src/data/uspto-full-distilled-weaklabel/
 !src/data/uspto50k-split2-distilled-split/
-!src/results/uspto-50k-split2-split_aug*
 !src/results/score.py
 src/data/uspto-full-distilled-weaklabel/reaxys-distill-src.txt
 src/data/uspto-full-distilled-weaklabel/reaxys-distill-tgt.txt

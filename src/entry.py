@@ -19,7 +19,7 @@ def cli_main():
     # ------------
     parser = ArgumentParser()
     #add weak_ensemble argument
-    parser.add_argument('--weak_ensemble', type=int, default=0)
+    parser.add_argument('--weak_ensemble', type=int, default=1)
     parser = pl.Trainer.add_argparse_args(parser)
     
 
@@ -92,10 +92,10 @@ def cli_main():
             flag_step_size=args.flag_step_size,
             inference_path = args.inference_path,
             weak_ensemble = args.weak_ensemble,
+            beam_size = args.beam_size,
+            sampling = args.sampling,
             
         )
-
-
     else:
         model = GraphFormer(
             n_layers=args.n_layers,
@@ -110,7 +110,7 @@ def cli_main():
             warmup_updates=args.warmup_updates,
             tot_updates=args.tot_updates,
             peak_lr=args.peak_lr,
-            end_lr=args.end_lr,
+            end_lr=args.peak_lr,
             edge_type=args.edge_type,
             multi_hop_max_dist=args.multi_hop_max_dist,
             flag=args.flag,
@@ -118,6 +118,8 @@ def cli_main():
             flag_step_size=args.flag_step_size,
             inference_path = args.inference_path,
             weak_ensemble = args.weak_ensemble,
+            beam_size = args.beam_size,
+            sampling = args.sampling,
             
         )
     # pretrained_dict = pretrained_model.state_dict()

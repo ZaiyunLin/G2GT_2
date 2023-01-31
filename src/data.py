@@ -70,8 +70,7 @@ class GraphDataModule(LightningDataModule):
         self.dataset_test = self.dataset['dataset'][:te]
         #self.dataset_train= self.dataset_test
         self.dataset_train = self.dataset['dataset'][te:tr]     
-        self.dataset_val =self.dataset_test
-        #self.dataset_val = self.dataset['dataset'][tr:va]
+        self.dataset_val = self.dataset['dataset'][tr:va]
         #self.dataset_test  =self.dataset_val
         
         self.num_workers = num_workers
@@ -88,11 +87,8 @@ class GraphDataModule(LightningDataModule):
     def setup(self, stage: str = None):
         te, tr, va = self.dataset['dataset'].get_idx_split()
         self.dataset_test = self.dataset['dataset'][:te]
-        #self.dataset_train= self.dataset_test
         self.dataset_train = self.dataset['dataset'][te:tr]     
-        self.dataset_val =self.dataset_test
-        #self.dataset_val = self.dataset['dataset'][tr:va]
-        #self.dataset_test  =self.dataset_val
+        self.dataset_val = self.dataset['dataset'][tr:va]
         
         #self.dataset_val =self.dataset_train
     def train_dataloader(self):

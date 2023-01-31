@@ -506,6 +506,7 @@ class UsptoDataset(InMemoryDataset):
         self.valindx = 0
         self.dic = {}
         self.weak_ensemble = weak_ensemble
+        self.dataset = dataset
         super(UsptoDataset, self).__init__(self.folder, transform, pre_transform)
 
         # self.data, self.slices = torch.load(self.processed_paths[0])
@@ -604,7 +605,13 @@ class UsptoDataset(InMemoryDataset):
 
     def len(self):
         #return 1182
-        return 50000
+        if self.dataset =='typed_uspto50k_split2':
+            return 50000
+        if self.dataset =='uspto-full-distilled-weaklabel':
+            return 96026+1219662+94967
+        if self.dataset =='uspto50k-split2-distilled-split':
+            return 5005+450550+4990
+        raise Exception( "not implemented dataset" )
         #return 5005+450550+4990 # 50k split2 distilled
         #return 873211+5001 #50k+distilled
         #return 125139
@@ -633,6 +640,8 @@ class UsptoDataset(InMemoryDataset):
         #return data
         
     def get_idx_split(self):
+        if self.dataset == 'typed_uspto50k_split2':
+            return 5000,45000,50000
         #return 1182,0,0
         #return 5005,5005+450550,5005+450550+4990 # 50k split2 distilled
         #return 1,873211,873211+5001 #50k+distilled
@@ -644,7 +653,14 @@ class UsptoDataset(InMemoryDataset):
         #return 50000,767109,852000
         # return 85234,767109,852000
         #return 96026,96026+1219662,96026+1219662+94967 #uspto-full-and-distill
-        return 5000,45000,50000
+        if self.dataset =='uspto-full-distilled-weaklabel':
+            return 96026,96026+1219662,96026+1219662+94967
+        if self.dataset == 'uspto50k-split2-distilled-split':
+            return 5005,5005+450550,5005+450550+4990
+        # raise exception, not implemented
+        raise Exception( "not implemented dataset" )
+
+
         #return 111098,111098,111098
         #return 100000,500299,500299
         #return 0,40000*5,40000*5+5000

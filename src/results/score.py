@@ -3,11 +3,8 @@ import numpy as np
 from rdkit.Chem import Draw
 from rdkit.Chem import AllChem,Descriptors
 
-from IPython.display import Image, display
 import pickle
 import glob
-from rdkit.Chem.Draw import IPythonConsole
-import pandas as pd
 import argparse
 from collections import Counter
 
@@ -80,6 +77,8 @@ def get_arguments():
     parser = argparse.ArgumentParser(description='g2gt')
     #file name, allow multiple file as input
     parser.add_argument('--file', type=str, nargs='+', help='file name')
+    #beam size
+    parser.add_argument('--beam', type=int, default=100, help='beam size')
     args = parser.parse_args()
     return args
 
@@ -105,7 +104,9 @@ if __name__ == "__main__":
     for file in args.file:
         files.append(file)
         tmp_dic = {}
-        for name in glob.glob(file+'/out*'):
+        #regrex for read file name: out* or usptov*
+        
+        for name in glob.glob(file + '/out*') + glob.glob(file + '/usptov*'):
             print(name)
             f = open(name,"rb")
             while 1:
@@ -116,7 +117,7 @@ if __name__ == "__main__":
                     break
             f.close()
         
-        print(len(tmp_dic))
+        # print(len(tmp_dic))
         dics.append(tmp_dic)
 
     correct = 0
@@ -233,7 +234,7 @@ if __name__ == "__main__":
         print("max_frag")
     else:
         print('no_max_frag')
-    print("all correct\n",topn/cont)
+    # print("all correct\n",topn/cont)
 
     print('top 10\n',topn2[:10]/cont2)
     print('top 10,remove\n',topn2[:10]/cont)
